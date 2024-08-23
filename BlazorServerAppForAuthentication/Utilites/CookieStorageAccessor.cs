@@ -1,51 +1,50 @@
 ﻿using Microsoft.JSInterop;
 
-namespace BlazorServerAppForAuthentication.Utilites
+namespace BlazorServerAppForAuthentication.Utilites;
+
+public class CookieStorageAccessor
 {
-    public class CookieStorageAccessor
+    private Lazy<IJSObjectReference> _accessorJsRef = new();
+    private readonly IJSRuntime _jsRuntime;
+
+    public CookieStorageAccessor(IJSRuntime jsRuntime)
     {
-        private Lazy<IJSObjectReference> _accessorJsRef = new();
-        private readonly IJSRuntime _jsRuntime;
+        _jsRuntime = jsRuntime;
+    }
 
-        public CookieStorageAccessor(IJSRuntime jsRuntime)
+    public async Task<T> GetValueAsync<T>(string key)
+    {
+        await WaitForReference();
+        var result = await _accessorJsRef.Value.InvokeAsync<T>("get", key);
+
+        return result;
+    }
+
+    public async Task SetValueAsync<T>(string key, T value)
+    {
+        await WaitForReference();
+        await _accessorJsRef.Value.InvokeVoidAsync("set", key, value);
+    }
+
+    private async Task WaitForReference()
+    {
+        if (_accessorJsRef.IsValueCreated is false)
         {
-            _jsRuntime = jsRuntime;
+            _accessorJsRef = new(await _jsRuntime.InvokeAsync<IJSObjectReference>("import", "/js/CookieStorageAccessor.js"));
         }
+    }
 
-        public async Task<T> GetValueAsync<T>(string key)
+    public async ValueTask DisposeAsync()
+    {
+        if (_accessorJsRef.IsValueCreated)
         {
-            await WaitForReference();
-            var result = await _accessorJsRef.Value.InvokeAsync<T>("get", key);
-
-            return result;
+            await _accessorJsRef.Value.DisposeAsync();
         }
+    }
 
-        public async Task SetValueAsync<T>(string key, T value)
-        {
-            await WaitForReference();
-            await _accessorJsRef.Value.InvokeVoidAsync("set", key, value);
-        }
-
-        private async Task WaitForReference()
-        {
-            if (_accessorJsRef.IsValueCreated is false)
-            {
-                _accessorJsRef = new(await _jsRuntime.InvokeAsync<IJSObjectReference>("import", "/js/CookieStorageAccessor.js"));
-            }
-        }
-
-        public async ValueTask DisposeAsync()
-        {
-            if (_accessorJsRef.IsValueCreated)
-            {
-                await _accessorJsRef.Value.DisposeAsync();
-            }
-        }
-
-        public async Task RemoveValueAsync(string key)
-        {
-            await WaitForReference();
-            await _accessorJsRef.Value.InvokeVoidAsync("remove", key);
-        }
+    public async Task RemoveValueAsync(string key)
+    {
+        await WaitForReference();
+        await _accessorJsRef.Value.InvokeVoidAsync("remove", key);
     }
 }
