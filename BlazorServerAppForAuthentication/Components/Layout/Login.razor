@@ -1,0 +1,92 @@
+﻿@page "/"
+@page "/login"
+
+@using Microsoft.AspNetCore.Authentication.Cookies
+@using BlazorServerAppForAuthentication.Model
+@using BlazorServerAppForAuthentication.Utilites
+
+@rendermode InteractiveServer
+@inject HttpClient HttpClient
+@inject CookieStorageAccessor CookieStorageAccessor
+
+<PageTitle>login</PageTitle>
+
+<table style="border: 2px dotted gray; border-collapse: collapse;">
+    <tr>
+        <td>
+            <label>ID </label>
+        </td>
+        <td>
+            <input type="text" @bind-value="loginModel.Id" />
+        </td>
+    </tr>
+    <tr>
+        <td>
+            <label>PW  </label>
+        </td>
+        <td>
+            <input type="password" @bind-value="loginModel.Pw" />
+        </td>
+    </tr>
+</table>
+<button type="button" @onclick="DoLogin">로그인</button>
+
+<p>
+    <strong>@Message</strong>
+</p>
+
+@code {
+
+    private string Message = "id랑 비밀번호를 넣고 로그인하세요";
+
+    private LoginModel loginModel = new LoginModel();
+
+    private async Task DoLogin()
+    {
+        var client = new HttpClient()
+            {
+                BaseAddress = new Uri("https://localhost:5001")
+            };
+
+        var response = await client.PostAsJsonAsync("/api/Auth/login", loginModel);
+
+        if (response.IsSuccessStatusCode)
+        {
+            if (response.Headers.TryGetValues("Set-Cookie", out var setCookies))
+            {
+                var responseCookieValue = ExtractCookieValue(setCookies.ToList());
+
+                if (!string.IsNullOrEmpty(responseCookieValue))
+                {
+                    await CookieStorageAccessor.SetValueAsync(CookieAuthenticationDefaults.AuthenticationScheme, responseCookieValue);
+                }
+            }
+
+            NavigationManager.NavigateTo("/home");
+        }
+        else
+        {
+            Message = "로그인 실패";
+        }
+    }
+
+    string ExtractCookieValue(List<string> setCookies)
+    {
+        var responseCookieValue = string.Empty;
+
+        foreach (var cookie in setCookies)
+        {
+            var tempCookie = cookie.Split(";").First();
+
+            if (tempCookie.Contains(CookieAuthenticationDefaults.AuthenticationScheme))
+            {
+                var tempKey = $"{CookieAuthenticationDefaults.AuthenticationScheme}=";
+                responseCookieValue = tempCookie.Replace(tempKey, "");
+                break;
+            }
+        }
+
+        return responseCookieValue;
+    }
+}
+

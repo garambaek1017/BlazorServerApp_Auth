@@ -1,0 +1,31 @@
+﻿@page "/logout"
+
+@using Microsoft.AspNetCore.Authentication.Cookies
+@using BlazorServerAppForAuthentication.Model
+@using BlazorServerAppForAuthentication.Utilites
+
+@rendermode InteractiveServer
+@inject HttpClient HttpClient
+@inject CookieStorageAccessor CookieStorageAccessor
+
+<PageTitle>logout</PageTitle>
+
+<button type="button" @onclick="DoLogout">로그아웃</button>
+
+@code {
+    private async Task DoLogout()
+    {
+        var client = new HttpClient()
+            {
+                BaseAddress = new Uri("https://localhost:5001")
+            };
+
+        var response = await client.GetAsync("/api/Auth/logout");
+        if (response.IsSuccessStatusCode)
+        {
+            await CookieStorageAccessor.RemoveValueAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+            NavigationManager.NavigateTo("/");
+        }
+    }
+}
+

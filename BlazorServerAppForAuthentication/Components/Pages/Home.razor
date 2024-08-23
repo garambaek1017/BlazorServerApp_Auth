@@ -1,0 +1,32 @@
+﻿@page "/home"
+@using Microsoft.AspNetCore.Components.Authorization
+@inject AuthenticationStateProvider AuthenticationStateProvider
+
+<PageTitle>Home</PageTitle>
+
+<h1>Hello, world!</h1>
+
+<p>
+    <h2> <strong>@AuthId</strong> </h2>  Welcome to your new app.
+</p>
+
+@code {
+
+    private string AuthId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // 인증 정보 가져옴 
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+
+        var user = authState.User;
+
+        if (user.Identity.IsAuthenticated)
+        {
+            AuthId = user.Identity.Name;
+        }
+
+        // 실제론 아무 작용을 안하지만, 비동기 메서드 구조 유지용
+        await Task.CompletedTask;
+    }
+}
